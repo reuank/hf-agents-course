@@ -3,4 +3,11 @@ name = "hf-agents-course"
 version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+    "notebook>=7.4.2",
+    "openai>=1.82.0",
+    "openai-agents>=0.0.16",
+    "pydantic>=2.11.5",
+    "requests>=2.32.3",
+]
