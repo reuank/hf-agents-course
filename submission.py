@@ -121,6 +121,7 @@ async def main():
 
                 try_number += 1
 
+    print("\n" + "=" * 50 + "\n")
     print(submit(all_answers))
 
 if __name__ == "__main__":
