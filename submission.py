@@ -49,8 +49,7 @@ async def main():
     with trace(workflow_name="HuggingFace Agents Course Submission"):
         for question_id, question in enumerate(questions):
             print("\n" + "="*50 + "\n")
-            print(f"Answering question {question_id}: {question['question']}")
-            print(f"ID: {question['task_id']}")
+            print(f"Answering question {question_id + 1} (ID: {question['task_id']}):\n{question['question']}\n")
 
             if "youtube.com" in question['question']:
                 print("This questions references a YouTube video, which is not supported. Trying anyway!")
@@ -75,15 +74,19 @@ async def main():
                         "type": "input_image",
                         "image_url": file_url
                     })
+                    print("Attached image to conversation")
 
                 elif file_extension == "py":
                     input_item["content"][0]["text"] += "\nHere is the code:\n"
                     input_item["content"][0]["text"] += file.text
+                    print(f"Attached code to conversation:\n {file.text}")
 
                 elif file_extension == "xlsx":
                     excel_file = BytesIO(file.content)
                     input_item["content"][0]["text"] += "\nHere is the data:\n"
-                    input_item["content"][0]["text"] += pd.read_excel(excel_file).to_csv(index=False)
+                    csv_data = pd.read_excel(excel_file).to_csv(index=False)
+                    input_item["content"][0]["text"] += csv_data
+                    print(f"Attached XLSX data to conversation:\n {csv_data}")
 
                 elif file_extension == "mp3":
                     mp3_file = BytesIO(file.content)
@@ -91,6 +94,7 @@ async def main():
                     transcript = OpenAI().audio.transcriptions.create(model="gpt-4o-transcribe", file=mp3_file).text
                     input_item["content"][0]["text"] += "\nHere is the transcript:\n"
                     input_item["content"][0]["text"] += transcript
+                    print(f"Attached mp3 transcript to conversation:\n {transcript}")
 
                 else:
                     print(f"Extension {file_extension} not supported")
