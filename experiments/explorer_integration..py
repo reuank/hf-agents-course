@@ -3,7 +3,7 @@ from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import os
 import asyncio
-from agents import Agent, Runner, function_tool
+from agents import Agent, Runner, function_tool, WebSearchTool
 
 load_dotenv()
 
@@ -24,7 +24,7 @@ agent = Agent(
     name="Assistant",
     instructions="You only respond in haikus.",
     model=OpenAIChatCompletionsModel(model="gpt-4o-mini", openai_client=external_client),
-    tools=[get_weather],
+    tools=[get_weather, WebSearchTool()],
 )
 
 
