@@ -10,7 +10,6 @@ load_dotenv()
 
 
 COURSE_BASE_URL = "https://agents-course-unit4-scoring.hf.space"
-GAIA_DATA_BASE_URL = "https://huggingface.co/datasets/gaia-benchmark/GAIA/resolve/main/2023/validation"
 
 class ResponseFormat(BaseModel):
     reasoning: str
@@ -68,17 +67,16 @@ async def main():
             }
 
             if question["file_name"]:
-                file_url = f"{GAIA_DATA_BASE_URL}/{question['file_name']}"
-                file = requests.get(file_url, headers={"Authorization": f"Bearer {os.getenv('HUGGINGFACE_TOKEN')}"}, allow_redirects=True)
-                file_name = file.headers["content-disposition"].split('filename="')[1].rstrip('";')
-                file_extension = file_name.split(".")[-1]
+                file_url = f"{COURSE_BASE_URL}/files/{question['task_id']}"
+                file_extension = question["file_name"].split(".")[-1]
+                file = requests.get(file_url)
 
                 print(f"This question has a file! Processing {file_name}")
 
                 if file_extension == "png":
                     input_item["content"].append({
                         "type": "input_image",
-                        "image_url": file.url
+                        "image_url": file_url
                     })
                     print(f"Attached png to history")
                 else:
@@ -104,7 +102,6 @@ async def main():
                     conversation.append({"content": f"No, that was wrong. Do not answer with {llm_answer} again. Try again!", "role": "user"})
 
                 try_number += 1
-                # print(json.dumps(conversation, indent=4))
 
         print(submit(all_answers))
 
