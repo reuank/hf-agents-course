@@ -1,10 +1,10 @@
-import os
-import uuid
-
+from io import BytesIO
+import pandas as pd
 from dotenv import load_dotenv
 import asyncio
 from agents import Agent, Runner, WebSearchTool, trace, TResponseInputItem
 import requests
+from openai import OpenAI
 from pydantic import BaseModel
 load_dotenv()
 
@@ -12,7 +12,7 @@ load_dotenv()
 COURSE_BASE_URL = "https://agents-course-unit4-scoring.hf.space"
 
 class ResponseFormat(BaseModel):
-    reasoning: str
+    # reasoning: str
     final_answer: str
 
 agent = Agent(
@@ -45,18 +45,15 @@ async def main():
     conversation: list[TResponseInputItem] = []
     questions: list[dict[str, str]] = requests.get(f"{COURSE_BASE_URL}/questions").json()
     all_answers: list[dict[str, str]] = []
-    group_id = uuid.uuid4().hex
 
-    #with trace(workflow_name="HuggingFace Agents Course"):
-    for question_id, question in enumerate(questions):
-        with trace(workflow_name=f"Question {question['task_id']}", group_id=group_id):
+    with trace(workflow_name="HuggingFace Agents Course Submission"):
+        for question_id, question in enumerate(questions):
             print("\n" + "="*50 + "\n")
             print(f"Answering question {question_id}: {question['question']}")
             print(f"ID: {question['task_id']}")
 
             if "youtube.com" in question['question']:
-                print("Skipping this question, because it contains a video!")
-                continue
+                print("This questions references a YouTube video, which is not supported. Trying anyway!")
 
             correct = False
             try_number = 1
@@ -71,14 +68,30 @@ async def main():
                 file_extension = question["file_name"].split(".")[-1]
                 file = requests.get(file_url)
 
-                print(f"This question has a file! Processing {file_name}")
+                print(f"This question has a file! Processing {question["file_name"]}")
 
                 if file_extension == "png":
                     input_item["content"].append({
                         "type": "input_image",
                         "image_url": file_url
                     })
-                    print(f"Attached png to history")
+
+                elif file_extension == "py":
+                    input_item["content"][0]["text"] += "\nHere is the code:\n"
+                    input_item["content"][0]["text"] += file.text
+
+                elif file_extension == "xlsx":
+                    excel_file = BytesIO(file.content)
+                    input_item["content"][0]["text"] += "\nHere is the data:\n"
+                    input_item["content"][0]["text"] += pd.read_excel(excel_file).to_csv(index=False)
+
+                elif file_extension == "mp3":
+                    mp3_file = BytesIO(file.content)
+                    mp3_file.name = "audio.mp3"
+                    transcript = OpenAI().audio.transcriptions.create(model="gpt-4o-transcribe", file=mp3_file).text
+                    input_item["content"][0]["text"] += "\nHere is the transcript:\n"
+                    input_item["content"][0]["text"] += transcript
+
                 else:
                     print(f"Extension {file_extension} not supported")
                     continue
@@ -99,11 +112,12 @@ async def main():
                     conversation.append({"content": f"Perfect, thank you!", "role": "user"})
                     all_answers.append(dict(task_id=question["task_id"], submitted_answer=llm_answer))
                 else:
-                    conversation.append({"content": f"No, that was wrong. Do not answer with {llm_answer} again. Try again!", "role": "user"})
+                    conversation.append({"content": f"No, that was wrong. Do not answer with {llm_answer} ever again. "
+                                                    f"Try again, and follow the instructions closely!", "role": "user"})
 
                 try_number += 1
 
-        print(submit(all_answers))
+    print(submit(all_answers))
 
 if __name__ == "__main__":
     asyncio.run(main())
